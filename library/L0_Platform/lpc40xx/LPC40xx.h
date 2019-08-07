@@ -75,7 +75,7 @@ enum IRQn
   TIMER3_IRQn                   = 4,        /*!< Timer3 Interrupt                                 */
   UART0_IRQn                    = 5,        /*!< UART0 Interrupt                                  */
   UART1_IRQn                    = 6,        /*!< UART1 Interrupt                                  */
-  UART2_IRQn                    = 7,        /*!< UART2 Interrupt                                  */
+  UART2_IRQn                    = 7,        /*!< UART2 Interrupt                                  */  
   UART3_IRQn                    = 8,        /*!< UART3 Interrupt                                  */
   PWM1_IRQn                     = 9,        /*!< PWM1 Interrupt                                   */
   I2C0_IRQn                     = 10,       /*!< I2C0 Interrupt                                   */

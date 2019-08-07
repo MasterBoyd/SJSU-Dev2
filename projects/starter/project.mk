@@ -10,7 +10,7 @@
 #   make application
 #
 # NOTE: lpc40xx is for the SJTwo board
-PLATFORM = lpc40xx
+PLATFORM = stm32f10x
 
 # =============
 # UNIT TESTING

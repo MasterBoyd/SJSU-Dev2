@@ -1,18 +1,18 @@
 MEMORY
 {
     /* Flash memory region for the program, offset by the bootloader section */
-    FLASH (rx) : ORIGIN = 0, LENGTH = 512K
+    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 64k
 
     /* 32K (Heap starts here) */
-    SRAM (rwx) : ORIGIN = 0x10000000, LENGTH = 32K
+    SRAM (rwx) : ORIGIN = 0x20000000, LENGTH = 20k
 
     /* 32K (Globals at bottom, stack on top), heap continues from here */
-    SRAM_AHB (rwx) : ORIGIN = 0x2007c000, LENGTH = 32K
+    /* SRAM (rwx) : ORIGIN = 0x2007c000, LENGTH = 32K */
 
     /* Heap starts at SRAM because if heap starts from higher memory, then
      * malloc tracking routines get confused when sbrk() system function
      * returns higher heap memory first, and then lower heap memory.
-     * So we start heap from SRAM, and then move it up to SRAM_AHB if SRAM
+     * So we start heap from SRAM, and then move it up to SRAM if SRAM
      * portion runs out completely.
      */
 
@@ -50,11 +50,14 @@ SECTIONS
 		. = ALIGN(4) ;
 		section_table_start = .;
 		data_section_table = .;
+
+    /* Initialized*/
 		LONG(LOADADDR(.data));
 		LONG(    ADDR(.data));
 		LONG(  SIZEOF(.data));
 		data_section_table_end = .;
 		bss_section_table = .;
+    /* Un-initialized*/
 		LONG(    ADDR(.bss));
 		LONG(  SIZEOF(.bss));
 		bss_section_table_end = .;
@@ -63,8 +66,9 @@ SECTIONS
 
         /* Functions that are placed after the interrupt vector */
 		*(.after_vectors*)
-
+  /* Code*/
 		*(.text*)
+    /* const variables*/
 		*(.rodata .rodata.*)
 		. = ALIGN(4);
 
@@ -138,7 +142,7 @@ SECTIONS
 	.uninit_RESERVED : ALIGN(4)
 	{
 		KEEP(*(.bss.$RESERVED*))
-	} > SRAM_AHB
+	} > SRAM
 
 	.data : ALIGN(4)
 	{
@@ -148,7 +152,7 @@ SECTIONS
 		*(.data*)
 		. = ALIGN(4) ;
 		_edata = .;
-	} > SRAM_AHB AT>FLASH
+	} > SRAM AT>FLASH
 
 	/* MAIN BSS SECTION */
 	.bss : ALIGN(4)
@@ -159,7 +163,7 @@ SECTIONS
 		. = ALIGN(4) ;
 		_ebss = .;
 		PROVIDE(end = .);
-	} > SRAM_AHB
+	} > SRAM
 
 	/*
 	.symbol_table : ALIGN(4)
@@ -177,5 +181,5 @@ SECTIONS
 	/* Provide the start of the initial stack pointer
 	 * Debugger and ISP may use 32-bytes of space?
 	 */
-	PROVIDE(StackTop = ORIGIN(SRAM_AHB) + LENGTH(SRAM_AHB) - 32);
+	PROVIDE(StackTop = ORIGIN(SRAM) + LENGTH(SRAM) - 32);
 }
