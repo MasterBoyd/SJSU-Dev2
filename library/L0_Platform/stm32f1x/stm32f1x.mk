@@ -2,14 +2,14 @@ INCLUDES += $(LIBRARY_DIR)/L0_Platform/freertos
 
 SYSTEM_INCLUDES +=
 
-LIBRARY_LPC17XX += $(LIBRARY_DIR)/L0_Platform/stm32f10x/diskio.cpp
-LIBRARY_LPC17XX += $(LIBRARY_DIR)/L0_Platform/stm32f10x/startup.cpp
-LIBRARY_LPC17XX += $(LIBRARY_DIR)/L0_Platform/arm_cortex/m3/ARM_CM3/port.c
-LIBRARY_LPC17XX += $(LIBRARY_DIR)/L0_Platform/arm_cortex/exceptions.cpp
+LIBRARY_STM32F1X += $(LIBRARY_DIR)/L0_Platform/stm32f1x/diskio.cpp
+LIBRARY_STM32F1X += $(LIBRARY_DIR)/L0_Platform/stm32f1x/startup.cpp
+LIBRARY_STM32F1X += $(LIBRARY_DIR)/L0_Platform/arm_cortex/m3/ARM_CM3/port.c
+LIBRARY_STM32F1X += $(LIBRARY_DIR)/L0_Platform/arm_cortex/exceptions.cpp
 
-OPENOCD_CONFIG = $(LIBRARY_DIR)/L0_Platform/stm32f10x/stm32f10x.cfg
+OPENOCD_CONFIG = $(LIBRARY_DIR)/L0_Platform/stm32f1x/stm32f10x.cfg
 
-$(eval $(call BUILD_LIRBARY,libstm32f10x,LIBRARY_STM32F10X))
+$(eval $(call BUILD_LIRBARY,libstm32f1x,LIBRARY_STM32F1X))
 
 include $(LIBRARY_DIR)/L0_Platform/arm_cortex/m3/m3.mk
 

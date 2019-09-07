@@ -53,10 +53,15 @@ namespace
 using sjsu::cortex::InterruptController;
 // Create LPC40xx system controller to be used by low level initialization.
 sjsu::lpc17xx::SystemController system_controller;
-// Create timer0 to be used by lower level initialization for uptime calculation
+// Create timer0 to be used by lower level initialization for uptime calculatione
 sjsu::cortex::DwtCounter arm_dwt_counter;
 // Uart port 0 is used to communicate back to the host computer
 const sjsu::Uart & uart0 = sjsu::GetInactive<sjsu::Uart>();
+
+// Uart port 1 implementation
+
+
+
 // System timer is used to count milliseconds of time and to run the RTOS
 // scheduler.
 sjsu::cortex::SystemTimer system_timer(system_controller);

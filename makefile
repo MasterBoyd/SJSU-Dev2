@@ -11,7 +11,7 @@ GREEN=$(shell echo "\x1B[32;1m")
 RESET=$(shell echo "\x1B[0m")
 CURRENT_SETUP_VERSION=$(shell cat $(SJSU_DEV2_BASE)/setup_version.txt)
 # ============================
-# Modifying make Flags
+# Modifying make Flagsjta
 # ============================
 # The following list of targets that opt-out of output sync
 ifneq ($(MAKECMDGOALS), \

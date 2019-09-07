@@ -301,3 +301,5 @@ const sjsu::Uart & GetInactive<sjsu::Uart>()
   return inactive;
 }
 }  // namespace sjsu
+
+// extern int _edata:

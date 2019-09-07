@@ -50,11 +50,14 @@ SECTIONS
 		. = ALIGN(4) ;
 		section_table_start = .;
 		data_section_table = .;
+
+    /* Initialized*/
 		LONG(LOADADDR(.data));
 		LONG(    ADDR(.data));
 		LONG(  SIZEOF(.data));
 		data_section_table_end = .;
 		bss_section_table = .;
+    /* Un-initialized*/
 		LONG(    ADDR(.bss));
 		LONG(  SIZEOF(.bss));
 		bss_section_table_end = .;
@@ -63,8 +66,9 @@ SECTIONS
 
         /* Functions that are placed after the interrupt vector */
 		*(.after_vectors*)
-
+  /* Code*/
 		*(.text*)
+    /* const variables*/
 		*(.rodata .rodata.*)
 		. = ALIGN(4);
 
