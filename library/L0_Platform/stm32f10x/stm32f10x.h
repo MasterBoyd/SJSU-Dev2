@@ -48,11 +48,6 @@
  * @{
  */
 
-
-#include "L0_Platform/arm_cortex/m3/core_cm3.h"
-#include "system_stm32f10x.h"
-#include <stdint.h>
-
 #ifndef __STM32F10x_H
 #define __STM32F10x_H
 
@@ -66,7 +61,7 @@ extern "C"
    */
 
   /* Uncomment the line below according to the target STM32 device used in your
-     application */
+     application
     
 #if !defined(STM32F10X_LD) && !defined(STM32F10X_LD_VL) && \
     !defined(STM32F10X_MD) && !defined(STM32F10X_MD_VL) && \
@@ -535,6 +530,10 @@ extern "C"
   /**
    * @}
    */
+
+#include "L0_Platform/arm_cortex/m3/core_cm3.h"
+#include "system_stm32f10x.h"
+#include <stdint.h>
 
   /** @addtogroup Exported_types
    * @{
@@ -10141,9 +10140,9 @@ extern "C"
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif /* __STM32F10x_H */
+
+// #endif 
 
 /**
  * @}
