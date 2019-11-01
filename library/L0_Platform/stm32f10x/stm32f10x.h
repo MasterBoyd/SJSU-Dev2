@@ -1,3 +1,4 @@
+#pragma once
 /**
  ******************************************************************************
  * @file    stm32f10x.h
@@ -48,8 +49,11 @@
  * @{
  */
 
+
 #ifndef __STM32F10x_H
 #define __STM32F10x_H
+
+#pragma GCC system_header
 
 #ifdef __cplusplus
 extern "C"
@@ -531,7 +535,7 @@ extern "C"
    * @}
    */
 
-#include "L0_Platform/arm_cortex/m3/core_cm3.h"
+#include "L0_Platform/arm_cortex/m4/core_cm4.h"
 #include "system_stm32f10x.h"
 #include <stdint.h>
 

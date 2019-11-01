@@ -40,8 +40,9 @@
 #include "L1_Peripheral/cortex/dwt_counter.hpp"
 #include "L1_Peripheral/cortex/system_timer.hpp"
 #include "L1_Peripheral/interrupt.hpp"
-#include "L1_Peripheral/lpc17xx/system_controller.hpp"
-#include "L1_Peripheral/lpc17xx/uart.hpp"
+#include "L1_Peripheral/stm32f10x/system_controller.hpp"
+#include "L1_Peripheral/stm32f10x/uart.hpp"
+// #include "L1_Peripheral/stm32f10x/uart.hpp"
 #include "L1_Peripheral/inactive.hpp"
 #include "utility/log.hpp"
 #include "utility/macros.hpp"
@@ -52,7 +53,7 @@ namespace
 {
 using sjsu::cortex::InterruptController;
 // Create LPC40xx system controller to be used by low level initialization.
-sjsu::lpc17xx::SystemController system_controller;
+sjsu::stm32f10x::SystemController system_controller;
 // Create timer0 to be used by lower level initialization for uptime calculation
 sjsu::cortex::DwtCounter arm_dwt_counter;
 // Uart port 0 is used to communicate back to the host computer
@@ -63,17 +64,17 @@ sjsu::cortex::SystemTimer system_timer(system_controller);
 // Cortex NVIC interrupt controller used to setup FreeRTOS ISRs
 sjsu::cortex::InterruptController interrupt_controller;
 
+// sjsu::stm32f10x::uart uart1;
+// UART
 
-//UART
-
-
-int Lpc17xxStdOut(const char * data, size_t length)
+int stm32f10xStdOut(const char * data, size_t length)
 {
+  // uart1.write(data, length);
   uart0.Write(reinterpret_cast<const uint8_t *>(data), length);
   return length;
 }
 
-int Lpc17xxStdIn(char * data, size_t length)
+int stm32f10xStdIn(char * data, size_t length)
 {
   uart0.Read(reinterpret_cast<uint8_t *>(data), length);
   return length;
@@ -142,7 +143,7 @@ const sjsu::IsrPointer kInterruptVectorTable[] = {
   nullptr,                             // 13, Reserved
   InterruptController::LookupHandler,  // 14, FreeRTOS PendSV Handler
   InterruptController::LookupHandler,  // 15, The SysTick handler
-  // Chip Level - LPC17xx
+  // Chip Level - stm32f10x
   InterruptController::LookupHandler,  // 16, 0x40 - WDT
   InterruptController::LookupHandler,  // 17, 0x44 - TIMER0
   InterruptController::LookupHandler,  // 18, 0x48 - TIMER1
@@ -188,13 +189,13 @@ SJ2_WEAK(void InitializePlatform());
 void InitializePlatform()
 {
   // system_controller.SetSystemClockFrequency(config::kSystemClockRateMhz);
-  // // Set UART0 baudrate, which is required for printf and scanf to work properly
-  // system_controller.SetPeripheralClockDivider(
-  //     sjsu::lpc17xx::SystemController::Peripherals::kUart0, 1);
+  // // Set UART0 baudrate, which is required for printf and scanf to work
+  // properly system_controller.SetPeripheralClockDivider(
+  //     sjsu::stm32f10x::SystemController::Peripherals::kUart0, 1);
   // uart0.Initialize(config::kBaudRate);
 
-  sjsu::newlib::SetStdout(Lpc17xxStdOut);
-  sjsu::newlib::SetStdin(Lpc17xxStdIn);
+  sjsu::newlib::SetStdout(stm32f10xStdOut);
+  sjsu::newlib::SetStdin(stm32f10xStdIn);
 
   system_timer.SetTickFrequency(config::kRtosFrequency);
   sjsu::Status timer_start_status = system_timer.StartTimer();
