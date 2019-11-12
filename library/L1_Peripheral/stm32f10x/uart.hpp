@@ -13,6 +13,10 @@ class uart
  public:
   uart()
   {
+    did_i_run = false;
+  }
+  void setup()
+  {
     // make sure the relevant pins are appropriately set up.
     RCC->APB2ENR |= (1 << 2);      // enable clock for GPIOA
     RCC->APB2ENR |= (1 << 14);     // enable clock for USART1
@@ -40,6 +44,13 @@ class uart
   }
   void write(char data_send)
   {
+    if (did_i_run = false)
+    {
+      setup();
+      // Reset Port C Pin 13
+      GPIOC->BSRR = (1 << 29);
+      did_i_run   = true;
+    }
     // transfer data to DR register
     USART1->DR = data_send;
     // wait until data transmission is complete
@@ -47,6 +58,9 @@ class uart
     {
     };
   }
+
+ private:
+  bool did_i_run;
 };
 }  // namespace stm32f10x
 }  // namespace sjsu

@@ -69,7 +69,7 @@ sjsu::stm32f10x::uart uart1;
 int stm32f10xStdOut(const char * data, size_t length)
 {
   uart1.write(data, length);
-  uart0.Write(reinterpret_cast<const uint8_t *>(data), length);
+  // uart0.Write(reinterpret_cast<const uint8_t *>(data), length);
   return length;
 }
 
