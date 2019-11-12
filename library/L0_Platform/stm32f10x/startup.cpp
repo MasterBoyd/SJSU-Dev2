@@ -42,7 +42,6 @@
 #include "L1_Peripheral/interrupt.hpp"
 #include "L1_Peripheral/stm32f10x/system_controller.hpp"
 #include "L1_Peripheral/stm32f10x/uart.hpp"
-// #include "L1_Peripheral/stm32f10x/uart.hpp"
 #include "L1_Peripheral/inactive.hpp"
 #include "utility/log.hpp"
 #include "utility/macros.hpp"
@@ -64,12 +63,12 @@ sjsu::cortex::SystemTimer system_timer(system_controller);
 // Cortex NVIC interrupt controller used to setup FreeRTOS ISRs
 sjsu::cortex::InterruptController interrupt_controller;
 
-// sjsu::stm32f10x::uart uart1;
+sjsu::stm32f10x::uart uart1;
 // UART
 
 int stm32f10xStdOut(const char * data, size_t length)
 {
-  // uart1.write(data, length);
+  uart1.write(data, length);
   uart0.Write(reinterpret_cast<const uint8_t *>(data), length);
   return length;
 }
