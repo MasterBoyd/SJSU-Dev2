@@ -71,7 +71,8 @@ int main()
     // Reset Port C Pin 13
     GPIOC->BSRR = (1 << 29);
 
-    printf("Hello");
+    printf("H");
+
     sjsu::Delay(250ms);
 
     // Set Port C Pin 13

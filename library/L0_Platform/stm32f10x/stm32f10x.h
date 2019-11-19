@@ -138,6 +138,7 @@ extern "C"
 
 
 
+
    Tip: To avoid modifying this file each time you need to use different HSE,
  you can define the HSE value in your toolchain compiler preprocessor.
   */
@@ -155,8 +156,8 @@ extern "C"
  * @brief In the following line adjust the External High Speed oscillator (HSE)
  Startup Timeout value
    */
-#define HSE_STARTUP_TIMEOUT                             \
-  ((uint16_t)0x0500) /*!< Time out for HSE start up \ \ \
+#define HSE_STARTUP_TIMEOUT                               \
+  ((uint16_t)0x0500) /*!< Time out for HSE start up \ \ \ \
                       */
 
 #define HSI_VALUE \
@@ -168,8 +169,8 @@ extern "C"
 #define __STM32F10X_STDPERIPH_VERSION_MAIN (0x03) /*!< [31:24] main version */
 #define __STM32F10X_STDPERIPH_VERSION_SUB1 (0x05) /*!< [23:16] sub1 version */
 #define __STM32F10X_STDPERIPH_VERSION_SUB2 (0x00) /*!< [15:8]  sub2 version */
-#define __STM32F10X_STDPERIPH_VERSION_RC   \
-  (0x00) /*!< [7:0]  release candidate \ \ \
+#define __STM32F10X_STDPERIPH_VERSION_RC     \
+  (0x00) /*!< [7:0]  release candidate \ \ \ \
           */
 #define __STM32F10X_STDPERIPH_VERSION           \
   ((__STM32F10X_STDPERIPH_VERSION_MAIN << 24) | \
@@ -1362,6 +1363,7 @@ extern "C"
 #define PERIPH_BB_BASE                                                         \
   ((uint32_t)0x42000000) /*!< Peripheral base address in the bit-band region \ \
                           * \                                                  \
+                          * \ \                                                                             \
                           */
 
 #define FSMC_R_BASE ((uint32_t)0xA0000000) /*!< FSMC registers base address */
