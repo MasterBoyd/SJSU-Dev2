@@ -192,6 +192,7 @@ void InitializePlatform()
   // properly system_controller.SetPeripheralClockDivider(
   //     sjsu::stm32f10x::SystemController::Peripherals::kUart0, 1);
   // uart0.Initialize(config::kBaudRate);
+  uart1.setup();
 
   sjsu::newlib::SetStdout(stm32f10xStdOut);
   sjsu::newlib::SetStdin(stm32f10xStdIn);
