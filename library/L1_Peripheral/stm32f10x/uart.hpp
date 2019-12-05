@@ -33,20 +33,17 @@ class uart
   }
   void write(const char * data, size_t length)
   {
-    for (unsigned int i = 0; i < length; i++)
-    {
-      write(data[i]);
-    }
+    for (unsigned int i = 0; i < length; i++) write(data[i]);
   }
-  void write(char data_send)
+} void write(char data_send)
+{
+  // transfer data to DR register
+  USART1->DR = data_send;
+  // wait until data transmission is complete
+  while ((USART1->SR & (1 << 7)) == 0)
   {
-    // transfer data to DR register
-    USART1->DR = data_send;
-    // wait until data transmission is complete
-    // while ((USART1->SR & (1 << 7)) == 0)
-    // {
-    // };
-  }
-};
-}  // namespace stm32f10x
+  };
+}
+};  // namespace stm32f10x
+}  // namespace sjsu
 }  // namespace sjsu
