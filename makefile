@@ -7,7 +7,9 @@
 YELLOW=$(shell echo "\x1B[33;1m")
 RED=$(shell echo "\x1B[31;1m")
 MAGENTA=$(shell echo "\x1B[35;1m")
+BLUE=$(shell echo "\x1B[34;1m")
 GREEN=$(shell echo "\x1B[32;1m")
+WHITE=$(shell echo "\x1B[37;1m")
 RESET=$(shell echo "\x1B[0m")
 CURRENT_SETUP_VERSION=$(shell cat $(SJSU_DEV2_BASE)/setup_version.txt)
 # ============================
@@ -18,7 +20,7 @@ ifneq ($(MAKECMDGOALS), \
        $(filter $(MAKECMDGOALS), \
         presubmit openocd debug debug-test flash jtag-flash platform-flash \
         platform-jtag-flash lint ))
-MAKEFLAGS += --output-sync
+MAKEFLAGS += --output-sync=target
 endif
 #
 # Setting the number of threads
@@ -54,6 +56,7 @@ MAKEFLAGS += --jobs=$(NPROCS)
 endif
 
 ifeq ($(MAKECMDGOALS), $(filter $(MAKECMDGOALS), debug jtag-flash))
+ifneq ($(PLATFORM), linux)
 ifndef DEBUG_DEVICE
 $(info $(shell printf '$(RED)'))
 $(info +--------------- Missing command line arguments ----------------+)
@@ -74,6 +77,7 @@ $(info $(shell printf '$(RESET)'))
 $(error )
 endif
 endif
+endif
 
 ifneq ($(MAKECMDGOALS), presubmit)
 endif
@@ -83,15 +87,21 @@ endif
 # SJSU-Dev2 Toolchain Paths
 # ============================
 # Path to CLANG compiler
-SJCLANG_PATH   = $(SJSU_DEV2_BASE)/tools/clang+llvm-*/
-SJCLANG        = $(shell cd $(SJCLANG_PATH) ; pwd)
+SJCLANG_PATH      = $(SJSU_DEV2_BASE)/tools/clang+llvm-*/
+SJCLANG           = $(shell cd $(SJCLANG_PATH) ; pwd)
 # Path to ARM GCC compiler
-SJARMGCC_PATH  = $(SJSU_DEV2_BASE)/tools/gcc-arm-none-eabi-*/
-SJARMGCC       = $(shell cd $(SJARMGCC_PATH) ; pwd)
+SJARMGCC_PATH     = $(SJSU_DEV2_BASE)/tools/gcc-arm-none-eabi-*/
+SJARMGCC          = $(shell cd $(SJARMGCC_PATH) ; pwd)
 # Path to Openocd compiler
-OPENOCD_DIR = $(SJSU_DEV2_BASE)/tools/openocd
+OPENOCD_DIR       = $(shell grep -q Microsoft /proc/version && \
+                      echo "$(SJSU_DEV2_BASE)/tools/openocd-wsl" || \
+                      echo "$(SJSU_DEV2_BASE)/tools/openocd")
+OPENOCD_EXECUTABLE= $(shell grep -q Microsoft /proc/version && \
+                      echo "openocd.exe" || echo "openocd")
+# Path to Openocd compiler
+GDBINIT_PATH      = $(SJSU_DEV2_BASE)/tools/gdb_dashboard/gdbinit
 # Compiler and library settings:
-SJLIBDIR  = $(SJSU_DEV2_BASE)/firmware/library
+SJLIBDIR          = $(SJSU_DEV2_BASE)/firmware/library
 
 # =================================
 # Updating the LD_LIBRARY_PATH
@@ -148,29 +158,20 @@ TEST_ARGS ?=
 # ============================
 # Compilation Tools
 # ============================
-DEVICE_CC        = $(SJARMGCC)/bin/arm-none-eabi-gcc
-DEVICE_CPPC      = $(SJARMGCC)/bin/arm-none-eabi-g++
-DEVICE_OBJDUMP   = $(SJARMGCC)/bin/arm-none-eabi-objdump
-DEVICE_SIZEC     = $(SJARMGCC)/bin/arm-none-eabi-size
-DEVICE_OBJCOPY   = $(SJARMGCC)/bin/arm-none-eabi-objcopy
-DEVICE_NM        = $(SJARMGCC)/bin/arm-none-eabi-nm
-DEVICE_AR        = $(SJARMGCC)/bin/arm-none-eabi-ar
-DEVICE_RANLIB    = $(SJARMGCC)/bin/arm-none-eabi-ranlib
-DEVICE_ADDR2LINE = $(SJARMGCC)/bin/arm-none-eabi-addr2line
-DEVICE_GDB       = $(SJARMGCC)/bin/arm-none-eabi-gdb-py
 # Cause compiler warnings to become errors.
 # Used in presubmit checks to make sure that the codebase does not include
 # warnings
 WARNINGS_ARE_ERRORS ?=
 # IMPORTANT: GCC must be accessible via the PATH environment variable
-HOST_CC        = $(SJCLANG)/bin/clang
-HOST_CPPC      = $(SJCLANG)/bin/clang++
-HOST_OBJDUMP   = $(SJCLANG)/bin/llvm-objdump
-HOST_SIZEC     = $(SJCLANG)/bin/llvm-size
-HOST_OBJCOPY   = $(SJCLANG)/bin/llvm-objcopy
-HOST_NM        = $(SJCLANG)/bin/llvm-nm
-HOST_COV       = $(SJCLANG)/bin/llvm-cov
-CLANG_TIDY     = $(SJCLANG)/bin/clang-tidy
+HOST_CC         = $(SJCLANG)/bin/clang
+HOST_CPPC       = $(SJCLANG)/bin/clang++
+HOST_OBJDUMP    = $(SJCLANG)/bin/llvm-objdump
+HOST_SIZEC      = $(SJCLANG)/bin/llvm-size
+HOST_OBJCOPY    = $(SJCLANG)/bin/llvm-objcopy
+HOST_NM         = $(SJCLANG)/bin/llvm-nm
+HOST_COV        = $(SJCLANG)/bin/llvm-cov
+CLANG_TIDY      = $(SJCLANG)/bin/clang-tidy
+HOST_SYMBOLIZER = $(SJCLANG)/bin/llvm-symbolizer
 # Mux between using the firmware compiler executables or the host compiler
 ifeq ($(MAKECMDGOALS), $(filter $(MAKECMDGOALS), test library-test))
 CC      = $(HOST_CC)
@@ -195,7 +196,7 @@ endif
 BUILD_DIRECTORY_NAME = build
 
 ifeq ($(MAKECMDGOALS), application)
-$(info $(shell printf '$(MAGENTA)Building application firmware...$(RESET)\n'))
+$(info $(shell printf '$(MAGENTA)Building application firmware...$(RESET)'))
 endif
 
 # "make application"'s build directory becomes "build/application"
@@ -267,11 +268,10 @@ $(1)_OBJECTS = $$(addprefix $(OBJECT_DIR)/, $$($(2):=.o))
 
 $(PLATFORM_STATIC_LIBRARY_DIR)/$(1).a: $$($(1)_OBJECTS)
 	@mkdir -p "$(PLATFORM_STATIC_LIBRARY_DIR)"
-	@printf '$(YELLOW)Library  file ( A ) $(RESET): $$@ '
 	@rm -f "$@"
-	@$(DEVICE_AR) rcs "$$@" $$^
-	@$(DEVICE_RANLIB) "$$@"
-	@printf '$(GREEN)DONE!$(RESET)\n'
+	@$$(DEVICE_AR) rcs "$$@" $$^
+	@$$(DEVICE_RANLIB) "$$@"
+	@echo -e '$(YELLOW)Library file ( A )$(RESET)  : $$@ '
 
 endef
 # Set of ALL compilable test files in the current library.
@@ -316,8 +316,8 @@ OBJECTS           = $(addprefix $(OBJECT_DIR)/, $(COMPILABLES:=.o))
 # Compilation Flags
 # ===========================
 OPTIMIZE  = -O$(OPT) -fmessage-length=0 -ffunction-sections -fdata-sections \
-            -fno-exceptions -fno-omit-frame-pointer \
-            -fasynchronous-unwind-tables
+            -fno-exceptions -fno-omit-frame-pointer
+            # -fasynchronous-unwind-tables
 CPPOPTIMIZE = -fno-rtti -fno-threadsafe-statics
 DEBUG_FLAG  = -g
 WARNINGS  = -Wall -Wextra -Wshadow -Wlogical-op -Wfloat-equal \
@@ -327,16 +327,19 @@ WARNINGS  = -Wall -Wextra -Wshadow -Wlogical-op -Wfloat-equal \
             -Wsuggest-final-methods $(WARNINGS_ARE_ERRORS)
 CPPWARNINGS = -Wold-style-cast -Woverloaded-virtual -Wsuggest-override \
               -Wuseless-cast $(WARNINGS_ARE_ERRORS)
-DEFINES   = -D ELF_FILE=\"$(EXECUTABLE)\" -D PLATFORM=$(PLATFORM)
+DEFINES   = -D ELF_FILE=\"$(EXECUTABLE)\"
 DISABLED_WARNINGS = -Wno-main -Wno-variadic-macros
 # Combine all of the flags together
-COMMON_FLAGS += $(OPTIMIZE) $(DEBUG_FLAG) $(WARNINGS) $(DEFINES) \
+COMMON_FLAGS += $(OPTIMIZE) $(DEBUG_FLAG) $(DEFINES) \
                 $(DISABLED_WARNINGS) -fdiagnostics-color
 # Add the last touch for object files
 CFLAGS_COMMON = $(COMMON_FLAGS) $(INCLUDES) $(SYSTEM_INCLUDES) -MMD -MP -c
-LINKFLAGS = $(COMMON_FLAGS)  -Wl,--gc-sections -Wl,-Map,"$(MAP)" \
-            -specs=nano.specs \
+
+ifndef LINKFLAGS
+LINKFLAGS = $(COMMON_FLAGS) -Wl,--gc-sections -Wl,-Map,"$(MAP)" \
+            --specs=nano.specs --specs=rdimon.specs \
             -T $(LIBRARY_DIR)/L0_Platform/$(PLATFORM)/linker.ld
+endif
 
 # Enable a whole different set of exceptions, checks, coverage tools and more
 # with the test target
@@ -354,13 +357,14 @@ CPPFLAGS = -fprofile-arcs -fPIC -fexceptions -fno-inline -fno-builtin \
           $(WARNINGS_ARE_ERRORS) \
          -D HOST_TEST=1 -D TARGET=HostTest -D SJ2_BACKTRACE_DEPTH=1024 \
          -D CATCH_CONFIG_FAST_COMPILE \
+         -D PLATFORM=host \
          $(INCLUDES) $(SYSTEM_INCLUDES) $(DEFINES) $(DEBUG_FLAG) \
          $(DISABLED_WARNINGS) \
          -O0 -MMD -MP -c
 CFLAGS = $(CPPFLAGS)
 else
-CFLAGS = $(CFLAGS_COMMON) -D TARGET=Application
-CPPFLAGS = $(CFLAGS) $(CPPWARNINGS) $(CPPOPTIMIZE)
+CFLAGS = $(CFLAGS_COMMON) -D TARGET=Application -D PLATFORM=$(PLATFORM) -DTRACE -DOS_USE_TRACE_SEMIHOSTING_STDOUT
+CPPFLAGS = $(CFLAGS) $(CPPWARNINGS) $(CPPOPTIMIZE) $(WARNINGS)
 endif
 
 # ===========================
@@ -374,7 +378,7 @@ FILE_EXCLUDES = grep -v $(addprefix -e ,$(LINT_FILTER))
 
 # Find all files within the firmware directory to be evaluated
 LINT_FILES  = $(shell find $(PROJECTS_DIR)/hello_world \
-                      $(PROJECTS_DIR)/hyperload \
+                      $(PROJECTS_DIR)/starter \
                       $(LIBRARY_DIR) $(DEMOS_DIR) \
                       -name "*.h"   -o \
                       -name "*.hpp" -o \
@@ -410,7 +414,8 @@ TEST_EXEC  = $(BUILD_DIRECTORY_NAME)/tests.exe
 .DEFAULT_GOAL := default
 # Tell make that these recipes don't have a end product
 .PHONY: default build cleaninstall telemetry monitor show-lists clean flash \
-        telemetry presubmit openocd debug library-clean purge test library-test
+        telemetry presubmit openocd debug library-clean purge test \
+        library-test $(SIZE)
 print-%  : ; @echo $* = $($*)
 # ====================================================================
 # When the user types just "make" or "help" this should appear to them
@@ -427,7 +432,7 @@ help:
 	@echo "  clean        - deletes build folder contents"
 	@echo "  cleaninstall - cleans, builds, and installs application firmware on "
 	@echo "                 device."
-	@echo " library-clean - cleans static libraries files"
+	@echo "  library-clean - cleans static libraries files"
 	@echo "  purge        - remove local build files and static libraries "
 	@echo "  telemetry    - Launch telemetry web interface on platform"
 	@echo
@@ -471,7 +476,7 @@ flash:
 jtag-flash:
 	@$(MAKE) --quiet application
 	@printf '$(MAGENTA)Programming chip via debug port...$(RESET)\n'
-	@$(OPENOCD_DIR)/bin/openocd -s $(OPENOCD_DIR)/scripts/ \
+	@$(OPENOCD_DIR)/bin/$(OPENOCD_EXECUTABLE) -s $(OPENOCD_DIR)/scripts/ \
 	-c "source [find interface/$(DEBUG_DEVICE).cfg]" -f $(OPENOCD_CONFIG) \
 	-c "program \"$(EXECUTABLE)\" reset exit 0x0"
 # ====================================================================
@@ -514,7 +519,9 @@ library-test: test $(TEST_EXEC)
 test: $(TEST_EXEC)
 	@rm -f $(COVERAGE_FILES) 2> /dev/null
 	@export LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) && \
-		$(TEST_EXEC) $(TEST_ARGS) --use-colour="yes"
+	 export ASAN_SYMBOLIZER_PATH=$(HOST_SYMBOLIZER) && \
+	 ASAN_OPTIONS="symbolize=1 color=always" \
+	 $(TEST_EXEC) $(TEST_ARGS) --use-colour="yes"
 	@mkdir -p "$(COVERAGE_DIR)"
 	@gcovr $(TEST_SOURCE_DIRECTORIES) \
 		--object-directory="$(BUILD_DIRECTORY_NAME)/" \
@@ -543,9 +550,17 @@ stacktrace-application:
 # Start gdb and connect to openocd jtag debugging session
 
 debug:
-	$(info $(shell printf '$(MAGENTA)Starting firmware debug...$(RESET)\n'))
-	$(TOOLS_DIR)/launch_openocd_gdb.sh $(OPENOCD_DIR) $(DEBUG_DEVICE) \
-	  $(OPENOCD_CONFIG) $(DEVICE_GDB) $(CURRENT_DIRECTORY)/$(EXECUTABLE)
+	@$(info $(shell printf '$(MAGENTA)Starting firmware debug...$(RESET)\n'))
+	@$(TOOLS_DIR)/launch_openocd_gdb.sh \
+			$(DEVICE_GDB) \
+			$(GDBINIT_PATH) \
+			$(PLATFORM) \
+			$(CURRENT_DIRECTORY)/$(EXECUTABLE) \
+			$(OPENOCD_DIR) \
+			$(DEBUG_DEVICE) \
+			$(OPENOCD_CONFIG) \
+			$(OPENOCD_EXECUTABLE)
+
 
 debug-test:
 	export LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) && gdb build/tests.exe
@@ -581,50 +596,49 @@ show-lists:
 # ====================================================================
 
 $(HEX): $(EXECUTABLE)
-	@printf '$(YELLOW)Generating Hex Image $(RESET)   : $@ '
 	@$(OBJCOPY) -O ihex "$<" "$@"
-	@printf '$(GREEN)Hex Generated!$(RESET)\n'
+	@echo -e '$(YELLOW)Generated Hex Image $(RESET)   : $@'
 
 $(BINARY): $(EXECUTABLE)
-	@printf '$(YELLOW)Generating Binary Image $(RESET): $@ '
 	@$(OBJCOPY) -O binary "$<" "$@"
-	@printf '$(GREEN)Binary Generated!$(RESET)\n'
+	@echo -e '$(YELLOW)Generated Binary Image $(RESET): $@'
+
 
 $(SIZE): $(EXECUTABLE)
-	@echo ' '
-	@echo 'Showing Image Size Information: '
+	@echo
+	@echo -e '$(WHITE)   Memory region:     Used Size  Region Size  %age Used'
+	@echo -ne '$(RESET)'
+	@export GREP_COLOR='1;34' ; cat '$(SIZE)' | grep --color=always ".*: " || true
+	@echo
+	@echo -e '$(WHITE)Section Memory Usage$(RESET)'
 	@$(SIZEC) --format=berkeley "$<"
-	@echo ' '
+	@echo
 
 $(LIST): $(EXECUTABLE)
-	@printf '$(YELLOW)Generating Disassembly$(RESET)  : $@ '
 	@$(OBJDUMP) --disassemble --all-headers --source --demangle --wide "$<" > "$@"
-	@printf '$(GREEN)Disassembly Generated!$(RESET)\n'
+	@echo -e '$(YELLOW)Disassembly Generated!$(RESET)  : $@'
 
 $(CORE_STATIC_LIBRARY): $(LIBRARIES)
-	@printf '$(YELLOW)Final Library file ( A ) $(RESET): $@ '
 	@rm -f "$@"
 	@$(DEVICE_AR) -rcT "$@" $^
 	@$(DEVICE_RANLIB) "$@"
-	@printf '$(GREEN)DONE!$(RESET)\n'
+	@echo -e '$(YELLOW)Final Library file ( A ) $(RESET): $@'
 
 $(EXECUTABLE): $(OBJECTS) $(CORE_STATIC_LIBRARY)
-	@printf '$(YELLOW)Linking Executable $(RESET)     : $@ '
+	@echo -e '$(YELLOW)Linking Executable$(RESET)    : $@'
 	@mkdir -p "$(dir $@)"
-	@$(CPPC) $(LINKFLAGS) -o "$@" $(OBJECTS) $(CORE_STATIC_LIBRARY)
-	@printf '$(GREEN)Executable Generated!$(RESET)\n'
+	@$(CPPC) -Wl,--print-memory-usage $(LINKFLAGS) -o "$@" \
+			$(OBJECTS) $(CORE_STATIC_LIBRARY) 1> "$(SIZE)"
 
 $(OBJECT_DIR)/%.c.o: %.c
-	@printf '$(YELLOW)Building file ( C ) $(RESET): $< '
 	@mkdir -p "$(dir $@)"
 	@$(CC) $(CFLAGS) -std=gnu11 -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
-	@printf '$(GREEN)DONE!$(RESET)\n'
+	@echo -e '$(YELLOW)Built file ( C ) $(RESET): $<'
 
 $(OBJECT_DIR)/%.o: %
-	@printf '$(YELLOW)Building file (C++) $(RESET): $< '
 	@mkdir -p "$(dir $@)"
-	@$(CPPC) $(CPPFLAGS) -std=c++17 -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
-	@printf '$(GREEN)DONE!$(RESET)\n'
+	@$(CPPC) $(CPPFLAGS) -std=c++2a -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo -e '$(YELLOW)Built file (C++) $(RESET): $<'
 
 $(DBC_BUILD):
 	@mkdir -p "$(dir $@)"
@@ -632,22 +646,21 @@ $(DBC_BUILD):
 		-i "$(LIBRARY_DIR)/$(DBC_DIR)/243.dbc" -s $(ENTITY) > $(DBC_BUILD)
 
 $(TEST_EXEC): $(OBJECTS)
-	@printf '$(YELLOW)Linking Test Executable $(RESET) : $@ '
+	@echo -e '$(YELLOW)Linking Test Executable $(RESET) : $@'
 	@mkdir -p "$(dir $@)"
 	@$(CPPC) -fprofile-arcs -fPIC -fexceptions -fno-inline \
 					 -fno-inline-small-functions -fno-default-inline \
 					 -fkeep-inline-functions -fno-elide-constructors  \
 					 -ftest-coverage -O0 -fsanitize=address \
-					 -std=c++17 -stdlib=libc++ -lc++ -lc++abi \
+					 -std=c++2a -stdlib=libc++ -lc++ -lc++abi \
 					 -o $(TEST_EXEC) $(OBJECTS)
-	@printf '$(GREEN)Test Executable Generated!$(RESET)\n'
+	@echo -e '$(GREEN)Test Executable Generated!$(RESET)'
 
 $(OBJECT_DIR)/%.tidy: %
-	@printf '$(YELLOW)Evaluating file: $(RESET)$< '
 	@mkdir -p "$(dir $@)"
 	@$(CLANG_TIDY) $(if $(or $(findstring .hpp,$<), $(findstring .cpp,$<)), \
-		-extra-arg="-std=c++17") "$<"  -- \
+		-extra-arg="-std=c++2a") "$<"  -- \
 		-D TARGET=HostTest -D HOST_TEST=1 \
 		-isystem"$(SJCLANG)/include/c++/v1/" \
 		-stdlib=libc++ $(INCLUDES) $(SYSTEM_INCLUDES) 2> $@
-	@printf '$(GREEN)DONE!$(RESET)\n'
+	@echo -e '$(GREEN)Evaluated file: $(RESET)$< '

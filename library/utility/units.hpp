@@ -18,9 +18,14 @@
 #define ENABLE_PREDEFINED_FREQUENCY_UNITS
 #define ENABLE_PREDEFINED_TEMPERATURE_UNITS
 #define ENABLE_PREDEFINED_ANGLE_UNITS
+#define ENABLE_PREDEFINED_ILLUMINANCE_UNITS
+#define ENABLE_PREDEFINED_LUMINOUS_FLUX_UNITS
+#define ENABLE_PREDEFINED_VOLTAGE_UNITS
+#define ENABLE_PREDEFINED_IMPEDANCE_UNITS
+#define ENABLE_PREDEFINED_CURRENT_UNITS
 
 #include "third_party/units/units.h"
-#include <chrono>  // NOLINT
+#include <chrono>
 
 using namespace std::chrono_literals;  // NOLINT
 using namespace units::literals;  // NOLINT

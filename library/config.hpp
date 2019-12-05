@@ -13,8 +13,7 @@
 
 /// @ingroup SJSU-Dev2
 /// @defgroup Config Configuration
-/// @brief Testing...
-/// @{
+//@{
 namespace config
 {
 /// How to properly use global configuration option:
@@ -82,11 +81,19 @@ static_assert(4'800 <= kBaudRate && kBaudRate <= 4'000'000,
 
 /// Used to dump all the call stack when "PrintBacktrace" is called or an assert
 /// using PrintBacktrace is occurs.
-/// Disable this to omit getting these logs and reduce the binary size by ~5kB.
+/// Disable this to omit getting these logs and reduce the binary size by ~5kB
+/// to ~10kB
 #if !defined(SJ2_INCLUDE_BACKTRACE)
 #define SJ2_INCLUDE_BACKTRACE true
 #endif  // !defined(SJ2_INCLUDE_BACKTRACE)
 SJ2_DECLARE_CONSTANT(INCLUDE_BACKTRACE, bool, kIncludeBacktrace);
+
+/// Enables vsnprintf which enables full control over printf. Without this,
+/// printf cannot print out variables.
+#if !defined(SJ2_INCLUDE_VSNPRINTF)
+#define SJ2_INCLUDE_VSNPRINTF true
+#endif  // !defined(SJ2_INCLUDE_VSNPRINTF)
+SJ2_DECLARE_CONSTANT(INCLUDE_VSNPRINTF, bool, kIncludeVsnprintf);
 
 /// Used to offset the returned addresses from the libunwind GetIP function
 /// (get instruction pointer), in order to properly identify the line of code
@@ -122,8 +129,7 @@ static_assert(kLogLevel == SJ2_LOG_LEVEL_NONESET ||
                   kLogLevel == SJ2_LOG_LEVEL_DEBUG ||
                   kLogLevel == SJ2_LOG_LEVEL_INFO ||
                   kLogLevel == SJ2_LOG_LEVEL_WARNING ||
-                  kLogLevel == SJ2_LOG_LEVEL_ERROR ||
-                  kLogLevel == SJ2_LOG_LEVEL_CRITICAL,
+                  kLogLevel == SJ2_LOG_LEVEL_ERROR,
               "SJ2_LOG_LEVEL must equal to one of the predefined log levels "
               "such as SJ2_LOG_LEVEL_INFO.");
 
@@ -134,31 +140,22 @@ static_assert(kLogLevel == SJ2_LOG_LEVEL_NONESET ||
 #endif  // !defined(SJ2_DESCRIPTIVE_FUNCTION_NAME)
 SJ2_DECLARE_CONSTANT(DESCRIPTIVE_FUNCTION_NAME, bool, kDescriptiveFunctionName);
 
-/// Used to define the log level of the build
-#if !defined(SJ2_BACKTRACE_DEPTH)
-#define SJ2_BACKTRACE_DEPTH 64
-#endif  // !defined(SJ2_BACKTRACE_DEPTH)
-SJ2_DECLARE_CONSTANT(BACKTRACE_DEPTH, size_t, kBacktraceDepth);
-
 /// @defgroup 3P Third party support defines
-/// @{
-
-/// @defgroup Printf Printf
-/// @{
+//@{
 
 /// Enable or disable float support in printf statements. Setting to false will
 /// reduce binary size.
 #if !defined(SJ2_PRINTF_SUPPORT_FLOAT)
 #define SJ2_PRINTF_SUPPORT_FLOAT true
 #endif  // !defined(PRINTF_SUPPORT_FLOAT)
-SJ2_DECLARE_CONSTANT(PRINTF_SUPPORT_FLOAT, bool, kPrintfSupportFloat);
+/// Enables FLOAT support for the 3rd party printf library.
 #define PRINTF_SUPPORT_FLOAT SJ2_PRINTF_SUPPORT_FLOAT
 
 /// Enable printing of 64 bit numbers. Setting to false will reduce binary size.
 #if !defined(SJ2_PRINTF_SUPPORT_LONG_LONG)
 #define SJ2_PRINTF_SUPPORT_LONG_LONG true
 #endif  // !defined(PRINTF_SUPPORT_LONG_LONG)
-SJ2_DECLARE_CONSTANT(PRINTF_SUPPORT_LONG_LONG, bool, kPrintfSupportLongLong);
+/// Enables LONG LONG support for the 3rd party printf library.
 #define PRINTF_SUPPORT_LONG_LONG SJ2_PRINTF_SUPPORT_LONG_LONG
 
 /// Enable support for the ptrdiff_t type. Setting to false will reduce binary
@@ -166,13 +163,8 @@ SJ2_DECLARE_CONSTANT(PRINTF_SUPPORT_LONG_LONG, bool, kPrintfSupportLongLong);
 #if !defined(SJ2_PRINTF_SUPPORT_PTRDIFF_T)
 #define SJ2_PRINTF_SUPPORT_PTRDIFF_T true
 #endif  // !defined(PRINTF_SUPPORT_PTRDIFF_T)
-SJ2_DECLARE_CONSTANT(PRINTF_SUPPORT_PTRDIFF_T, bool, kPrintfSupportPtrdiff);
+/// Enables PTRDIFF support for the 3rd party printf library.
 #define PRINTF_SUPPORT_PTRDIFF_T SJ2_PRINTF_SUPPORT_PTRDIFF_T
-
-/// @} End Printf
-
-/// @} End 3P
-
+//@} End 3P
 }  // namespace config
-
-/// @}  End Config
+//@}  End Config

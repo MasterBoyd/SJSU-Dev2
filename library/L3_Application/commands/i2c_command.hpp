@@ -7,7 +7,7 @@
 
 #include "L1_Peripheral/i2c.hpp"
 #include "L3_Application/commandline.hpp"
-#include "third_party/etl/vector.h"
+#include "utility/containers/vector.hpp"
 #include "utility/log.hpp"
 
 namespace sjsu
@@ -48,8 +48,12 @@ class I2cCommand final : public Command
                 i2c discover
   )";
 
-  explicit I2cCommand(const I2c & i2c) : Command("i2c", kDescription), i2c_(i2c)
+  explicit I2cCommand(const I2c & i2c)
+      : Command("i2c", kDescription),
+        devices_found_(decltype(devices_found_)::allocator_type{}),
+        i2c_(i2c)
   {
+    devices_found_.reserve(decltype(devices_found_)::allocator_type::size);
   }
 
   void Initialize()
@@ -125,8 +129,8 @@ class I2cCommand final : public Command
       if (Status::kSuccess == i2c_.Write(address, nullptr, 0, 50ms))
       {
         AddressString_t address_string;
-        snprintf(address_string.str, sizeof(address_string.str), "0x%02X",
-                 address);
+        snprintf(
+            address_string.str, sizeof(address_string.str), "0x%02X", address);
         devices_found_.push_back(address_string);
       }
     }
@@ -139,15 +143,19 @@ class I2cCommand final : public Command
       LOG_ERROR(
           "Invalid number of arguments for read operation, required %d, "
           "supplied %d",
-          kRegisterAddress, argc);
+          kRegisterAddress,
+          argc);
       return 1;
     }
     Arguments_t args = ParseArguments(argc, argv);
     uint8_t contents[128];
     if (args.length < sizeof(contents))
     {
-      i2c_.WriteThenRead(args.device_address, &args.register_address, 1,
-                         contents, args.length);
+      i2c_.WriteThenRead(args.device_address,
+                         &args.register_address,
+                         1,
+                         contents,
+                         args.length);
       debug::Hexdump(contents, args.length);
     }
     else
@@ -165,22 +173,23 @@ class I2cCommand final : public Command
       LOG_ERROR(
           "Invalid number of arguments for write operation, required %d, "
           "supplied %d",
-          kRegisterAddress, argc);
+          kRegisterAddress,
+          argc);
       return 1;
     }
     Arguments_t args = ParseArguments(argc, argv);
     uint8_t payload[64];
     size_t position;
+    size_t number_of_arguments = static_cast<size_t>(argc);
     for (position = 0; position < std::size(payload) &&
-                       argv[Args::kWriteStartByte + position] != nullptr;
+                       (Args::kWriteStartByte + position) < number_of_arguments;
          position++)
     {
       payload[position] =
           std::get<0>(ParseByte(argv[Args::kWriteStartByte + position], 16));
     }
-    // subtract 1 since position will overshoot by 1
-    i2c_.Write(args.device_address, payload, position - 1);
-    debug::Hexdump(payload, position - 1);
+    i2c_.Write(args.device_address, payload, position);
+    debug::Hexdump(payload, position);
     return 0;
   }
 
@@ -199,8 +208,10 @@ class I2cCommand final : public Command
     return 0;
   }
 
-  int AutoComplete(int argc, const char * const argv[],
-                   const char * completion[], const size_t) override
+  int AutoComplete(int argc,
+                   const char * const argv[],
+                   const char * completion[],
+                   const size_t) override
   {
     size_t position = 0;
     completion[0]   = nullptr;
@@ -241,7 +252,8 @@ class I2cCommand final : public Command
     if (argc - 1 < kOperation)
     {
       LOG_ERROR("Invalid number of arguments, required %d, supplied %d",
-                kOperation, argc);
+                kOperation,
+                argc);
       return 1;
     }
 
@@ -264,9 +276,10 @@ class I2cCommand final : public Command
   }
 
  private:
-  static inline const char * const kI2cOperations[] = { "read", "write",
-                                                        "discover", nullptr };
-  etl::vector<AddressString_t, command::kAutoCompleteOptions> devices_found_;
+  static inline const char * const kI2cOperations[] = {
+    "read", "write", "discover", nullptr
+  };
+  sjsu::Vector<AddressString_t, command::kAutoCompleteOptions> devices_found_;
   const I2c & i2c_;
 };
 }  // namespace sjsu

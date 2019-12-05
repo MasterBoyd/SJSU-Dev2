@@ -1,12 +1,11 @@
 #include <cstdint>
-#include <iterator>
 
 #include "utility/log.hpp"
 #include "utility/time.hpp"
 
 int main()
 {
-  LOG_INFO("Staring Hello World Application");
+  LOG_INFO("Starting Hello World Application");
   while (true)
   {
     for (uint8_t i = 0; i < 16; i++)
@@ -15,6 +14,5 @@ int main()
       sjsu::Delay(500ms);
     }
   }
-
   return -1;
 }

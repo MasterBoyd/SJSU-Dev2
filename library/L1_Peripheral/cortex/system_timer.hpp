@@ -2,7 +2,8 @@
 // up the SystemTimer.
 #pragma once
 
-// NOTE: Support for cortex M4 also supports M3 and possibly M0 and M0+ as well.
+#include <functional>
+
 #include "L0_Platform/arm_cortex/m4/core_cm4.h"
 #include "L1_Peripheral/cortex/interrupt.hpp"
 #include "L1_Peripheral/system_controller.hpp"
@@ -16,10 +17,13 @@ namespace sjsu
 {
 namespace cortex
 {
+/// Implementation of the sjsu::SystemTimer for all ARM Cortex-M series
+/// microcontrollers.
 class SystemTimer final : public sjsu::SystemTimer
 {
  public:
-  // Source: "UM10562 LPC408x/407x User manual" table 83 page 132
+  /// Enumeration holding the bit positions of used flags.
+  /// Source: "UM10562 LPC408x/407x User manual" table 83 page 132
   enum ControlBitMap : uint8_t
   {
     kEnableCounter = 0,
@@ -27,52 +31,54 @@ class SystemTimer final : public sjsu::SystemTimer
     kClkSource     = 2,
     kCountFlag     = 16
   };
-
+  /// Address of the ARM Cortex SysTick peripheral.
   inline static SysTick_Type * sys_tick = SysTick;
-  /// system_timer_isr defaults to nullptr. The actual SystemTickHandler should
-  /// check if the isr is set to nullptr, and if it is, turn off the timer, if
-  /// set a proper function then execute it.
-  inline static IsrPointer system_timer_isr = nullptr;
+  /// callback defaults to nullptr. The actual SystemTickHandler
+  /// should check if the isr is set to nullptr, and if it is, turn off the
+  /// timer, if set a proper function then execute it.
+  inline static InterruptCallback callback = nullptr;
   /// Used to count the number of times system_timer has executed. If the
   /// frequency of the SystemTimer is set to 1kHz, this could be used as a
   /// milliseconds counter.
   inline static std::chrono::microseconds counter = 0us;
-  inline static const sjsu::cortex::InterruptController
-      kCortexInterruptController = sjsu::cortex::InterruptController();
-
-  explicit SystemTimer(const sjsu::SystemController & system_controller,
-                       const sjsu::InterruptController & interrupt_controller =
-                           kCortexInterruptController)
-      : system_controller_(system_controller),
-        interrupt_controller_(interrupt_controller)
-  {
-  }
-
-  /// WARNING: Doing so will most likely disable FreeRTOS
+  /// Disables this system timer.
+  /// @warning: Calling this function so will disable FreeRTOS.
   static void DisableTimer()
   {
     sys_tick->LOAD = 0;
     sys_tick->VAL  = 0;
     sys_tick->CTRL = 0;
   }
+  /// Universal default system timer interrupt handler.
   static void SystemTimerHandler()
   {
-    counter += 1ms;
     // This assumes that SysTickHandler is called every millisecond.
     // Changing that frequency will distort the milliseconds time.
-    if (system_timer_isr != nullptr)
+    counter += 1ms;
+    if (callback)
     {
-      system_timer_isr();
+      callback();
     }
   }
+  /// @return returns the current system_timer counter value.
   static std::chrono::microseconds GetCount()
   {
     return counter;
   }
-
-  void SetInterrupt(IsrPointer isr) const override
+  /// Constructor for ARM Cortex M system timer.
+  ///
+  /// @param system_controller - used specifically to get platform's frequency.
+  explicit constexpr SystemTimer(
+      const sjsu::SystemController & system_controller)
+      : system_controller_(system_controller)
   {
-    system_timer_isr = isr;
+  }
+
+  void Initialize() const override {}
+
+  void SetCallback(InterruptCallback isr) const override
+  {
+    callback = isr;
   }
 
   Status StartTimer() const override
@@ -81,15 +87,22 @@ class SystemTimer final : public sjsu::SystemTimer
 
     if (sys_tick->LOAD != 0)
     {
-      sys_tick->VAL = 0;
-      sys_tick->CTRL |= (1 << ControlBitMap::kTickInterupt);
-      sys_tick->CTRL |= (1 << ControlBitMap::kEnableCounter);
-      sys_tick->CTRL |= (1 << ControlBitMap::kClkSource);
-
-      interrupt_controller_.Register({
-          .interrupt_request_number  = cortex::SysTick_IRQn,
-          .interrupt_service_routine = SystemTimerHandler,
+      // The interrupt handler must be registered before you starting the timer
+      // by setting the Enable counter flag in the CTRL register.
+      // Otherwise, the handler may not be set by the time the first tick
+      // interrupt occurs.
+      sjsu::InterruptController::GetPlatformController().Enable({
+          .interrupt_request_number = cortex::SysTick_IRQn,
+          .interrupt_handler        = SystemTimerHandler,
       });
+      // Set all flags required to enable the counter
+      uint32_t ctrl_mask = (1 << ControlBitMap::kTickInterupt) |
+                           (1 << ControlBitMap::kEnableCounter) |
+                           (1 << ControlBitMap::kClkSource);
+      // Set the system tick counter to start immediately
+      sys_tick->VAL = 0;
+      sys_tick->CTRL |= ctrl_mask;
+
       status = Status::kSuccess;
     }
 
@@ -133,7 +146,6 @@ class SystemTimer final : public sjsu::SystemTimer
 
  private:
   const sjsu::SystemController & system_controller_;
-  const sjsu::InterruptController & interrupt_controller_;
 };
 }  // namespace cortex
 }  // namespace sjsu

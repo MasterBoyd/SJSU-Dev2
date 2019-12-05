@@ -1,8 +1,9 @@
 projects/*
 projects/**/build
 
+!projects/barebones
 !projects/hello_world
-!projects/hyperload
+!projects/starter
 
 demos/**/build
 library/static_libraries/*
@@ -17,6 +18,12 @@ tools/**/*
 !tools/putty32.exe
 !tools/putty64.exe
 !tools/launch_openocd_gdb.sh
+!tools/generate_doxygen_docs.sh
+!tools/doxygen_ignore_list.txt
+!tools/common.sh
+!tools/gdb_dashboard
+
+api/doxygen_stderr.txt
 
 **/*.gch
 **/*.gcno
